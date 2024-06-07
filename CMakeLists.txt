@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
 project(stella_vslam LANGUAGES CXX C)
-
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -58,9 +57,7 @@ endif()
 
 # ----- Set compiler options -----
 
-# Note: add_compile_options() accepts only "simple" generator-expressions :-(
 if(MSVC)
-    # C4251: DLL export, C4244: floating->integer, C4305: double->float, C4267: size_t->any, C4127: constant condition
     add_compile_options(/W4 $<$<CONFIG:Debug>:/MTd>;$<$<CONFIG:Release>:/MT> /source-charset:utf-8 /execution-charset:utf-8 /wd4251 /wd4244 /wd4305 /wd4267 /wd4127 /bigobj)
     add_compile_options("$<$<CONFIG:Debug>:/Zo>;$<$<CONFIG:Release>:/O2>;$<$<CONFIG:None>:/O2>")
     add_link_options(/NODEFAULTLIB:library)
@@ -86,17 +83,37 @@ endif()
 find_package(Threads REQUIRED)
 
 # OpenMP
+execute_process(COMMAND brew --prefix libomp
+                OUTPUT_VARIABLE OpenMP_HOME
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+message(STATUS "OpenMP Root : ${OpenMP_HOME}")
+# OpenMPのインストールチェック
+set(OpenMP_C_LIB_NAMES "omp")
+set(OpenMP_CXX_LIB_NAMES "omp")
+set(OpenMP_omp_LIBRARY "${OpenMP_HOME}/lib/libomp.dylib")
+# キャッシュ変数なのでFORCEオプションをつける
+set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -Wno-unused-command-line-argument -I${OpenMP_HOME}/include" CACHE STRING "" FORCE)
+# 同じくキャッシュ変数なのでFORCEオプションをつける
+set(OpenMP_C_FLAGS "-fopenmp -Wno-unused-command-line-argument -I${OpenMP_HOME}/include" CACHE STRING "" FORCE)
+
+
 find_package(OpenMP REQUIRED)
 if(NOT TARGET OpenMP::OpenMP_CXX)
     add_library(OpenMP::OpenMP_CXX IMPORTED INTERFACE)
     set_property(TARGET OpenMP::OpenMP_CXX
-                 PROPERTY INTERFACE_LINK_LIBRARIES ${OpenMP_CXX_FLAGS} Threads::Threads)
+                 PROPERTY INTERFACE_LINK_LIBRARIES ${OpenMP_omp_LIBRARY} Threads::Threads)
 endif()
 
 # Eigen
 find_package(Eigen3 3.3 REQUIRED)
 
 # yaml-cpp
+execute_process(COMMAND brew --prefix yaml-cpp
+                OUTPUT_VARIABLE YAML_CPP_HOME
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+set(CMAKE_CXX_FLAGS "-I${YAML_CPP_HOME}/include")
+set(CMAKE_EXE_LINKER_FLAGS "-L${YAML_CPP_HOME}/lib")
+
 find_package(yaml-cpp REQUIRED)
 
 # OpenCV
@@ -179,3 +196,4 @@ if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(test)
 endif()
+
