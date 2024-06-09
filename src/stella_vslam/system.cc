@@ -289,14 +289,42 @@ void system::enable_temporal_mapping() {
 }
 
 data::frame system::create_monocular_frame(const cv::Mat& img, const double timestamp, const cv::Mat& mask) {
-    // color conversion
+    // Ensure the input image is valid
+    if (img.empty()) {
+        spdlog::warn("preprocess: Input image is empty");
+        throw std::invalid_argument("Input image is empty");
+    }
+
+    // Check if camera is properly initialized
+    if (!camera_) {
+        spdlog::error("preprocess: Camera is not initialized");
+        throw std::runtime_error("Camera is not initialized");
+    }
+
+    // Color conversion
     if (!camera_->is_valid_shape(img)) {
         spdlog::warn("preprocess: Input image size is invalid");
+        throw std::invalid_argument("Input image size is invalid");
     }
-    cv::Mat img_gray = img;
+
+    // Make a hard copy of the image
+    cv::Mat img_gray = img.clone();
+
+    // Ensure the copied image is valid
+    if (img_gray.empty()) {
+        spdlog::error("preprocess: Cloned image is empty");
+        throw std::runtime_error("Cloned image is empty");
+    }
+
     util::convert_to_grayscale(img_gray, camera_->color_order_);
 
     data::frame_observation frm_obs;
+
+    // Ensure the extractor is properly initialized
+    if (!extractor_left_) {
+        spdlog::error("preprocess: Extractor is not initialized");
+        throw std::runtime_error("Extractor is not initialized");
+    }
 
     // Extract ORB feature
     keypts_.clear();
@@ -325,6 +353,7 @@ data::frame system::create_monocular_frame(const cv::Mat& img, const double time
 
     return data::frame(next_frame_id_++, timestamp, camera_, orb_params_, frm_obs, std::move(markers_2d));
 }
+
 
 data::frame system::create_stereo_frame(const cv::Mat& left_img, const cv::Mat& right_img, const double timestamp, const cv::Mat& mask) {
     // color conversion
