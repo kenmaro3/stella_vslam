@@ -6,6 +6,7 @@ vocab/
 .idea/
 cmake-build-debug/
 cmake-build-release/
+stella-mb-feasibility-tools/
 */.python-version
 *.user
 *~
